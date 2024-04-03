@@ -1,4 +1,4 @@
-#!/bin/bash
+# #!/bin/bash
 echo "Enter the bucket name"
 read name
 echo "Enter the name of policy: "
@@ -27,12 +27,12 @@ versionExpFlag=false
 abortFlag=false
 noneFlag=true
 
-stop=false
+
 firstTrans=true
 firstVerTrans=true
 
-while [ $stop == false ]
-do
+
+    echo "Enter the choice:"
     echo " 
           1.Move current versions of objects between storage classes 
           2.Move noncurrent versions of objects between storage classes
@@ -41,72 +41,39 @@ do
           5.Delete expired object delete markers or incomplete multipart uploads
           6.Exit
           "
+    read option
 
     case $option in
     "1") 
         noneFlag=false
         transitionFlag=true
         echo "Enter the Transitions"
-        cond=false
-        while [ $cond == false ]
-        do
-             echo "Do you want to enter the transition yes or no"
-             read choice
-             case $choice in
-             "yes") echo "Enter the days"
-                    read days
-                    echo "Enter the Storage class"
-                    read lowerclass
-                    class=$(echo $lowerclass | tr a-z A-Z)
-                    if [ $firstTrans == true ]
-                    then
-                        firstTrans=false
-                        newItem={\"Days\":"$days",\"StorageClass\":\"$class\"}
-                    else
-                        newItem=,{\"Days\":"$days",\"StorageClass\":\"$class\"}
-                    fi
-                    len=${#transitions[@]}
-                    transitions+=($newItem)
-                ;;
-            "no")  cond=true ;;
-            *) echo "Enter valid choice" 
-            esac
-        done
-
+             
+        class=$(echo $lowerclass | tr a-z A-Z)
+        if [ $firstTrans == true ]
+        then
+            firstTrans=false
+            newItem={\"Days\":"$days",\"StorageClass\":\"$class\"}
+        else
+            newItem=,{\"Days\":"$days",\"StorageClass\":\"$class\"}
+        fi
+        len=${#transitions[@]}
+        transitions+=($newItem)
         echo ${transitions[@]} > demo
         jsontrans=$(cat demo) ;;
     "2")
         noneFlag=false
         versionFlag=true
-        echo "Enter the version Transitions"
-        cond=false
-        while [ $cond == false ]
-        do
-            echo "Do you want to enter the transition yes or no"
-            read choice
-            case $choice in
-            "yes") echo "Enter the days"
-                read days
-                echo "Enter the Storage class"
-                read lowerclass
-                class=$(echo $lowerclass | tr a-z A-Z)
-                echo "Enter the versions to keep"
-                read ver
-                if [ $firstVerTrans == true ]
-                then
-                    firstVerTrans=false
-                    newItem={\"NoncurrentDays\":"$days",\"StorageClass\":\"$class\",\"NewerNoncurrentVersions\":"$ver"}
-                else
-                    newItem=,{\"NoncurrentDays\":"$days",\"StorageClass\":\"$class\",\"NewerNoncurrentVersions\":"$ver"}
-                fi
-                len=${#vertransitions[@]}
-                vertransitions+=($newItem)
-                ;;
-            "no")  cond=true ;;
-            *) echo "Enter valid choice" 
-            esac
-        done
-
+        class=$(echo $lowerclass | tr a-z A-Z)
+        if [ $firstVerTrans == true ]
+        then
+            firstVerTrans=false
+            newItem={\"NoncurrentDays\":"$days",\"StorageClass\":\"$class\",\"NewerNoncurrentVersions\":"$ver"}
+        else
+            newItem=,{\"NoncurrentDays\":"$days",\"StorageClass\":\"$class\",\"NewerNoncurrentVersions\":"$ver"}
+        fi
+        len=${#vertransitions[@]}
+        vertransitions+=($newItem)
         echo ${vertransitions[@]} > demo
         verjsontrans=$(cat demo) ;;
     "3")
@@ -131,21 +98,12 @@ do
     *)
         echo "Enter the right choice" ;;
     esac
-done
+
 
 if [ $noneFlag == true ]
 then
     echo "No Operation chosen hence no lifecycle poilcy"
     exit 1
-fi
-
-
-
-if [ $transitionFlag == true ]
-then
-    transitionString="\"Transitions\": [
-                        $jsontrans
-                    ]"
 fi
 
 if [ $expFlag == true ]
@@ -163,9 +121,16 @@ then
     fi
 fi
 
+if [ $transitionFlag == true ]
+then
+    transitionString="\"Transitions\": [
+                        $jsontrans
+                    ]"
+fi
+
 if [ $versionFlag == true ]
 then
-    if [ $expFlag == true || $transitionFlag == true ]
+    if [ $expFlag == true ]
     then
         versionString=",
                 \"NoncurrentVersionTransitions\": [
@@ -180,7 +145,7 @@ fi
 
 if [ $versionExpFlag == true ]
 then
-    if [ $versionFlag == true || $expFlag == true || $transitionFlag == true ]
+    if [ $versionFlag == true ]
     then
         versionExpString=",
                     \"NoncurrentVersionExpiration\": {
@@ -197,7 +162,7 @@ fi
 
 if [ $abortFlag == true ]
 then
-    if [ $versionExpFlag == true || $versionFlag == true || $expFlag == true || $transitionFlag == true ]
+    if [ $versionExpFlag == true ]
     then
         abortString=",
                 \"AbortIncompleteMultipartUpload\": {
@@ -209,6 +174,20 @@ then
                     }"
     fi
 fi
+
+
+# echo "{
+#     \"Rules\": [
+#         {
+#             \"ID\": \"$policy_name\",
+#             \"Filter\": {
+#                 \"Prefix\": \"$pre\"
+#             },
+#             \"Status\": \"Enabled\",
+#             $transitionString$expString$versionString$versionExpString$abortString
+#         }
+#     ]
+# }" > S_lifecycle.json
 
 content=$(aws s3api get-bucket-lifecycle-configuration --bucket "$name" 2>&1)
 
@@ -231,11 +210,9 @@ then
 else
     echo $content > ./S_lifecycle.json
     existing=$(cat ./S_lifecycle.json | jq '.[]')
-    echo $existing
     list=()
     for i in $existing
     do
-        echo $i
         if [ ! $i == '[' ]
         then 
             if [ ! $i == ']' ]
@@ -278,6 +255,56 @@ else
         }" > S_lifecycle.json
 #END
 fi
+# content=$(cat ./S_lifecycle.json | jq '.[]')
+# list=()
+# for i in $content
+# do
+#     if [ ! $i == '[' ]
+#     then 
+#         if [ ! $i == ']' ]
+#         then
+#             list+=($i)
+#         fi
+#     fi
+# done
+# len=${#list[@]}
+# if [ $(($len - 1)) -eq 0 ]
+# then 
+#     new="
+#         {
+#             \"ID\": \"policy-d\",
+#             \"Filter\": {
+#                 \"Prefix\": \"\"
+#             },
+#             \"Status\": \"Enabled\",
+#             \"Expiration\": {
+#                     \"Days\": 2000
+#                   }
+#         }"
+# else
+#     new=",
+#         {
+#             \"ID\": \"policy-d\",
+#             \"Filter\": {
+#                 \"Prefix\": \"\"
+#             },
+#             \"Status\": \"Enabled\",
+#             \"Expiration\": {
+#                     \"Days\": 2000
+#                   }
+#         }"
+# fi
+# list+=($new)
+# newlist=${list[@]}
+# # echo $newlist
+# echo "
+# [
+#     {
+#         \"Rules\": [
+#             $newlist
+#         ]
+#     }
+# ]" > S_lifecycle.json
 
 aws s3api put-bucket-lifecycle-configuration --bucket $name --lifecycle-configuration file://S_lifecycle.json
 echo "Configured lifecycle for bucket $name with following rules"
