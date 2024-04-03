@@ -33,7 +33,6 @@ firstVerTrans=true
 
 while [ $stop == false ]
 do
-    echo "Enter the choice:"
     echo " 
           1.Move current versions of objects between storage classes 
           2.Move noncurrent versions of objects between storage classes
@@ -42,7 +41,6 @@ do
           5.Delete expired object delete markers or incomplete multipart uploads
           6.Exit
           "
-    read option
 
     case $option in
     "1") 
