@@ -41,7 +41,6 @@ firstVerTrans=true
           5.Delete expired object delete markers or incomplete multipart uploads
           6.Exit
           "
-    read option
 
     case $option in
     "1") 
